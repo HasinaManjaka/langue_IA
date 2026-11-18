@@ -5,7 +5,16 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.models import Exercice, Langue, Niveau, Parcours, ParcoursExercice, TypeExercice
+from app.models import (
+    CorrigeExercice,
+    Exercice,
+    Langue,
+    Lecon,
+    Niveau,
+    Parcours,
+    ParcoursExercice,
+    TypeExercice,
+)
 from app.models import TestDiagnostic as Diagnostic
 from tests.conftest import creer_utilisateur
 
@@ -78,6 +87,64 @@ def test_refuse_plusieurs_parcours_pour_un_test_diagnostic(db: Session) -> None:
         id_niveau_vise=parcours.id_niveau_vise,
     )
     db.add(second_parcours)
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+
+
+def _creer_lecon(db: Session, parcours: Parcours, numero: int = 12) -> Lecon:
+    niveau = db.scalar(select(Niveau).where(Niveau.code == "A1"))
+    assert niveau is not None
+    lecon = Lecon(
+        parcours=parcours,
+        numero_lecon=numero,
+        titre="At the Language Centre",
+        texte_original="Mina works at a language centre.",
+        niveau=niveau,
+    )
+    db.add(lecon)
+    db.commit()
+    return lecon
+
+
+def test_refuse_un_numero_de_lecon_nul(db: Session) -> None:
+    parcours, _ = _creer_parcours_et_exercice(db)
+    lecon = _creer_lecon(db, parcours)
+    lecon.numero_lecon = 0
+    with pytest.raises(IntegrityError):
+        db.commit()
+    db.rollback()
+
+
+def test_refuse_deux_lecons_du_meme_numero_dans_un_parcours(db: Session) -> None:
+    parcours, _ = _creer_parcours_et_exercice(db)
+    _creer_lecon(db, parcours)
+    with pytest.raises(IntegrityError):
+        _creer_lecon(db, parcours)
+    db.rollback()
+
+
+def test_refuse_deux_corriges_pour_un_exercice(db: Session) -> None:
+    _, exercice = _creer_parcours_et_exercice(db)
+    db.add(
+        CorrigeExercice(
+            exercice=exercice,
+            reponse_attendue="studies",
+            explication="Present simple with she.",
+            mots_cles=[],
+            exemple_reponse="studies",
+        )
+    )
+    db.commit()
+    db.add(
+        CorrigeExercice(
+            id_exercice=exercice.id_exercice,
+            reponse_attendue="studies",
+            explication="Doublon.",
+            mots_cles=[],
+            exemple_reponse="studies",
+        )
+    )
     with pytest.raises(IntegrityError):
         db.commit()
     db.rollback()

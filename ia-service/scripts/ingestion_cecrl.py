@@ -22,6 +22,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import os
 import sys
 import tempfile
 import zipfile
@@ -38,7 +39,20 @@ from app.rag.corpus import (
     serialiser_descripteurs,
 )
 
-RACINE_DEPOT = Path(__file__).resolve().parents[2]
+
+def _racine_depot() -> Path:
+    """Repère la racine du dépôt, ou la racine du service dans l'image Docker."""
+    surcharge = os.environ.get("RACINE_DEPOT")
+    if surcharge:
+        return Path(surcharge).resolve()
+    chemin = Path(__file__).resolve()
+    for parent in chemin.parents:
+        if (parent / ".git").exists() or ((parent / "backend").is_dir() and (parent / "frontend").is_dir()):
+            return parent
+    return chemin.parents[1]
+
+
+RACINE_DEPOT = _racine_depot()
 
 FEUILLES = {"en": "English", "fr": "Francais"}
 

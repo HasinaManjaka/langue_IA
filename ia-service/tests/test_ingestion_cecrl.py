@@ -14,6 +14,7 @@ from scripts.ingestion_cecrl import (
     EMPREINTE_DESCRIPTEURS_2020,
     RACINE_DEPOT,
     _classeur_lisible,
+    _racine_depot,
     collecter,
     construire_source,
     descripteur_depuis_ligne,
@@ -105,6 +106,23 @@ def test_collecter_trie_par_numero_de_source() -> None:
     )
 
     assert [descripteur.source_no for descripteur in descripteurs] == [1, 2, 3]
+
+
+def test_racine_depot_tolere_l_arborescence_du_conteneur(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    faux_script = tmp_path / "ia-service" / "scripts" / "ingestion_cecrl.py"
+    faux_script.parent.mkdir(parents=True)
+    faux_script.touch()
+    monkeypatch.delenv("RACINE_DEPOT", raising=False)
+    monkeypatch.setattr("scripts.ingestion_cecrl.__file__", str(faux_script))
+
+    assert _racine_depot() == faux_script.parents[1]
+
+
+def test_racine_depot_peut_etre_surchargee(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
+    depot = tmp_path / "depot"
+    monkeypatch.setenv("RACINE_DEPOT", str(depot))
+
+    assert _racine_depot() == depot.resolve()
 
 
 def test_verifier_sortie_hors_depot_refuse_le_depot() -> None:

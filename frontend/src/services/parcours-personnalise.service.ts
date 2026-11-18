@@ -43,8 +43,25 @@ export interface ParcoursPersonnaliseService {
 const parLecon = (a: ExerciceParcours, b: ExerciceParcours) =>
   a.numeroLecon - b.numeroLecon || a.idParcoursExercice - b.idParcoursExercice;
 
-const corpsReponse = (reponse: ReponseExercice) =>
-  reponse.format === "conversation" ? { format: reponse.format, messages: reponse.messages } : reponse;
+type FormatReponseBackend = "choix" | "redaction";
+
+interface CorpsReponseBackend {
+  format: FormatReponseBackend;
+  reponse: string;
+}
+
+const formatBackend = (format: ReponseExercice["format"]): FormatReponseBackend =>
+  format === "choix" || format === "ecoute" ? "choix" : "redaction";
+
+const texteReponse = (reponse: ReponseExercice): string =>
+  reponse.format === "conversation"
+    ? reponse.messages.map((message) => `${message.role}: ${message.contenu}`).join("\n")
+    : reponse.reponse;
+
+const corpsReponse = (reponse: ReponseExercice): CorpsReponseBackend => ({
+  format: formatBackend(reponse.format),
+  reponse: texteReponse(reponse),
+});
 
 const corpsChatbot = (message: string, historique: MessageChatbot[]): MessageChatbotDto => ({
   message,

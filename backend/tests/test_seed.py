@@ -8,8 +8,25 @@ import pytest
 from sqlalchemy import func, select
 
 from app import seed
-from app.models import Formule, Langue, Niveau, Question, Utilisateur
+from app.models import (
+    CorrigeExercice,
+    Exercice,
+    Formule,
+    Langue,
+    Lecon,
+    Niveau,
+    Parcours,
+    ParcoursExercice,
+    Question,
+    StatutDiagnostic,
+    Utilisateur,
+)
+from app.models import (
+    TestDiagnostic as ModeleTestDiagnostic,
+)
 from app.seed_diagnostic import QUESTIONS_DEMO, charger_questions_demo
+from app.seed_us156 import EMAIL_APPRENANT_DEMO, EXERCICES, charger_contenu_demo_us156
+from tests.conftest import creer_utilisateur
 
 
 def _compter(db, modele) -> int:
@@ -42,6 +59,63 @@ class TestSeed:
     def test_une_question_deja_presente_n_est_pas_recreee(self, db):
         assert charger_questions_demo(db) > 0
         assert charger_questions_demo(db) == 0
+
+    def test_contenu_us156_est_rejouable(self, db, monkeypatch):
+        monkeypatch.setenv("SEED_DEMO", "true")
+
+        seed.main()
+        modeles = (Lecon, Exercice, CorrigeExercice, ParcoursExercice, Parcours, ModeleTestDiagnostic)
+        premier = tuple(_compter(db, modele) for modele in modeles)
+        seed.main()
+
+        assert premier == tuple(_compter(db, modele) for modele in modeles)
+        assert premier[0] == 2
+        assert premier[1] == 12
+        assert premier[2] == 12
+
+    def test_seed_attache_le_parcours_au_diagnostic_le_plus_recent(self, db):
+        apprenant = creer_utilisateur(db, email=EMAIL_APPRENANT_DEMO)
+        langue = db.scalar(select(Langue).where(Langue.code == "en"))
+        niveau = db.scalar(select(Niveau).where(Niveau.code == "A1"))
+        assert langue is not None and niveau is not None
+        for _ in range(2):
+            db.add(
+                ModeleTestDiagnostic(
+                    apprenant=apprenant.apprenant,
+                    langue=langue,
+                    niveau=niveau,
+                    id_niveau_final=niveau.id_niveau,
+                    statut=StatutDiagnostic.TERMINE,
+                )
+            )
+        db.commit()
+        diagnostics = db.scalars(
+            select(ModeleTestDiagnostic)
+            .where(ModeleTestDiagnostic.id_apprenant == apprenant.id_user)
+            .order_by(ModeleTestDiagnostic.id_test)
+        ).all()
+        recent = diagnostics[-1]
+
+        charger_contenu_demo_us156(db)
+
+        parcours = db.scalar(select(Parcours))
+        assert parcours is not None
+        assert parcours.id_test == recent.id_test
+
+    def test_seed_met_a_jour_un_exercice_deja_present(self, db, monkeypatch):
+        monkeypatch.setenv("SEED_DEMO", "true")
+        seed.main()
+        exercice = db.scalar(select(Exercice))
+        assert exercice is not None
+        exercice.intitule = "Ancien intitulé"
+        exercice.difficulte = 5
+        db.commit()
+
+        seed.main()
+        db.refresh(exercice)
+
+        assert exercice.intitule == EXERCICES[0]["intitule"]
+        assert exercice.difficulte == EXERCICES[0]["difficulte"]
 
 
 class TestBanqueDeQuestions:

@@ -17,6 +17,7 @@ os.environ["DATABASE_URL"] = URL_TEST.render_as_string(hide_password=False)
 os.environ["MEDIA_DIR"] = tempfile.mkdtemp(prefix="media-test-")
 os.environ["BCRYPT_ROUNDS"] = "4"  # hachage rapide en test
 os.environ["SECRET_KEY"] = "cle-de-test"
+os.environ["IA_SERVICE_URL"] = ""
 os.environ.pop("SMTP_HOST", None)
 
 import pytest  # noqa: E402
@@ -26,11 +27,14 @@ from sqlalchemy.orm import Session  # noqa: E402
 
 from alembic import command  # noqa: E402
 from alembic.config import Config  # noqa: E402
+from app.core.config import get_settings  # noqa: E402
 from app.core.database import SessionLocal, engine  # noqa: E402
 from app.core.security import creer_jeton_acces, hacher_mot_de_passe  # noqa: E402
 from app.main import app  # noqa: E402
 from app.models import Administrateur, Apprenant, Formateur, Role, StatutUtilisateur, Utilisateur  # noqa: E402
 from app.seed import charger_referentiel, charger_roles_et_permissions  # noqa: E402
+
+get_settings.cache_clear()
 
 MOT_DE_PASSE = "Langue2026"
 

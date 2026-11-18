@@ -73,6 +73,8 @@ export interface ContenuExerciceDto {
 /** GET /parcours/{id_parcours}/lecons/{numero_lecon} (403 si la leçon n'est pas encore atteinte). */
 export interface LeconParcoursDto {
   numero_lecon: number;
+  titre: string;
+  texte_original: string;
   est_lecon_de_revision: boolean;
   code_langue: string;
   exercices: (ExerciceParcoursDto & { contenu: string })[];
@@ -113,9 +115,41 @@ function valeurConnue<T extends string>(valeurs: readonly T[], valeur: string, q
   return trouvee;
 }
 
-function requis<T>(valeur: T | undefined, champ: string): T {
-  if (valeur === undefined || valeur === null || valeur === "") throw new Error(`Contenu d'exercice incomplet : ${champ}`);
+function texteRequis(valeur: unknown, champ: string, prefix = "Contenu d'exercice incomplet"): string {
+  if (typeof valeur !== "string" || !valeur.trim()) throw new Error(`${prefix} : ${champ}`);
   return valeur;
+}
+
+function texteOptionnel(valeur: unknown): string | null {
+  return typeof valeur === "string" && valeur.trim() ? valeur : null;
+}
+
+function listeRequise(valeur: unknown, champ: string): string[] {
+  if (!Array.isArray(valeur) || valeur.length === 0 || valeur.some((entree) => typeof entree !== "string" || !entree.trim())) {
+    throw new Error(`Contenu d'exercice incomplet : ${champ}`);
+  }
+  return valeur;
+}
+
+function entierPositif(valeur: unknown, defaut: number, champ: string): number {
+  if (valeur === undefined || valeur === null) return defaut;
+  if (typeof valeur !== "number" || !Number.isInteger(valeur) || valeur < 1) {
+    throw new Error(`Contenu d'exercice invalide : ${champ}`);
+  }
+  return valeur;
+}
+
+function objetExercice(json: string): ContenuExerciceDto {
+  let brut: unknown;
+  try {
+    brut = JSON.parse(json);
+  } catch {
+    throw new Error("Contenu d'exercice invalide : JSON mal formé");
+  }
+  if (typeof brut !== "object" || brut === null || Array.isArray(brut)) {
+    throw new Error("Contenu d'exercice invalide : objet attendu");
+  }
+  return brut as ContenuExerciceDto;
 }
 
 export function toParcoursPersonnalise(dto: ParcoursPersonnaliseDto): ParcoursPersonnalise {
@@ -158,43 +192,58 @@ export function toExerciceParcours(dto: ExerciceParcoursDto): ExerciceParcours {
 
 /** Lit le JSON de exercice.contenu ; un format inconnu ou un champ manquant est une erreur de contrat. */
 export function toContenuExercice(json: string): ContenuExercice {
-  const dto = JSON.parse(json) as ContenuExerciceDto;
-  const consigne = requis(dto.consigne, "consigne");
+  const dto = objetExercice(json);
+  const consigne = texteRequis(dto.consigne, "consigne");
   switch (dto.format) {
     case "choix":
-      return { format: "choix", consigne, enonce: requis(dto.enonce, "enonce"), choix: requis(dto.choix, "choix") };
+      return {
+        format: "choix",
+        consigne,
+        enonce: texteRequis(dto.enonce, "enonce"),
+        choix: listeRequise(dto.choix, "choix"),
+      };
     case "texte":
-      return { format: "texte", consigne, enonce: requis(dto.enonce, "enonce") };
+      return { format: "texte", consigne, enonce: texteRequis(dto.enonce, "enonce") };
     case "redaction":
-      return { format: "redaction", consigne, enonce: requis(dto.enonce, "enonce"), motsMinimum: dto.mots_minimum ?? 30 };
-    case "ecoute":
-      if (!dto.audio_url && !dto.texte_audio) throw new Error("Contenu d'exercice incomplet : audio_url ou texte_audio");
+      return {
+        format: "redaction",
+        consigne,
+        enonce: texteRequis(dto.enonce, "enonce"),
+        motsMinimum: entierPositif(dto.mots_minimum, 30, "mots_minimum"),
+      };
+    case "ecoute": {
+      const audioUrl = texteOptionnel(dto.audio_url);
+      const texteAudio = texteOptionnel(dto.texte_audio);
+      if (!audioUrl && !texteAudio) throw new Error("Contenu d'exercice incomplet : audio_url ou texte_audio");
       return {
         format: "ecoute",
         consigne,
-        question: requis(dto.question, "question"),
-        choix: requis(dto.choix, "choix"),
-        audioUrl: dto.audio_url ?? null,
-        texteAudio: dto.texte_audio ?? null,
+        question: texteRequis(dto.question, "question"),
+        choix: listeRequise(dto.choix, "choix"),
+        audioUrl,
+        texteAudio,
       };
+    }
     case "prononciation":
-      return { format: "prononciation", consigne, phrase: requis(dto.phrase, "phrase") };
+      return { format: "prononciation", consigne, phrase: texteRequis(dto.phrase, "phrase") };
     case "conversation":
       return {
         format: "conversation",
         consigne,
-        sujet: requis(dto.sujet, "sujet"),
-        messageInitial: requis(dto.message_initial, "message_initial"),
-        echangesMinimum: dto.echanges_minimum ?? 3,
+        sujet: texteRequis(dto.sujet, "sujet"),
+        messageInitial: texteRequis(dto.message_initial, "message_initial"),
+        echangesMinimum: entierPositif(dto.echanges_minimum, 3, "echanges_minimum"),
       };
     default:
-      throw new Error(`Format d'exercice non reconnu : ${dto.format}`);
+      throw new Error(`Format d'exercice non reconnu : ${String(dto.format)}`);
   }
 }
 
 export function toLeconParcours(dto: LeconParcoursDto): LeconParcours {
   return {
     numero: dto.numero_lecon,
+    titre: texteRequis(dto.titre, "titre", "Leçon incomplète"),
+    texteOriginal: texteRequis(dto.texte_original, "texte_original", "Leçon incomplète"),
     estLeconDeRevision: dto.est_lecon_de_revision,
     langue: dto.code_langue,
     exercices: dto.exercices

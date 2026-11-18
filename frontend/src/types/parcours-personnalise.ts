@@ -86,6 +86,8 @@ export interface ExerciceLecon extends ExerciceParcours {
 
 export interface LeconParcours {
   numero: number;
+  titre: string;
+  texteOriginal: string;
   estLeconDeRevision: boolean;
   langue: string;
   exercices: ExerciceLecon[];
@@ -97,8 +99,9 @@ export type ReponseExercice =
   | { format: "conversation"; messages: MessageChatbot[] };
 
 /**
- * AUTOMATIQUE : correction déterministe par le backend (QCM, écoute, phrase à compléter, prononciation) ;
- * IA : correction par le professeur IA (rédaction, conversation).
+ * AUTOMATIQUE : correction déterministe par le backend. Les formats étendus sont ramenés à `choix`
+ * (choix, écoute) ou `redaction` (texte, rédaction, prononciation, conversation) pour l'API actuelle ;
+ * IA : correction par le professeur IA (réponse libre).
  */
 export type ModeCorrection = "AUTOMATIQUE" | "IA";
 

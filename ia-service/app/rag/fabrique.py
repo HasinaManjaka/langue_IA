@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import logging
 
+from pydantic import ValidationError
+
 from app.core.erreurs import ErreurServiceIA
 from app.rag.base import RecuperateurRAG
 from app.rag.config import ConfigRAG
@@ -26,7 +28,15 @@ def construire_recuperateur(config: ConfigRAG | None = None) -> RecuperateurRAG:
     Une erreur de corpus est journalisée puis absorbée : un actif documentaire cassé ne doit pas empêcher le
     service de démarrer ni le diagnostic de répondre.
     """
-    parametres = config or ConfigRAG()
+    try:
+        parametres = config or ConfigRAG()
+    except (OSError, TypeError, ValueError, ValidationError) as exc:
+        logger.error(
+            "Configuration RAG invalide (%s) : récupérateur vide, estimation prudente attendue.",
+            type(exc).__name__,
+        )
+        return RecuperateurVide()
+
     if not parametres.corpus_actif:
         return RecuperateurVide()
 

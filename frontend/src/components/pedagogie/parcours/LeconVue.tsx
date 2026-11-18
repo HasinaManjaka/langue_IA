@@ -67,6 +67,13 @@ function ContenuLecon({ parcours, numero }: { parcours: ParcoursPersonnalise; nu
         )}
       </header>
 
+      {lecon.data && (
+        <section className="card">
+          <h2 className="text-h4 font-semibold">{lecon.data.titre}</h2>
+          <p className="mt-2 whitespace-pre-line text-content-secondary">{lecon.data.texteOriginal}</p>
+        </section>
+      )}
+
       {lecon.isPending ? (
         <Chargement label="Chargement des exercices…" />
       ) : lecon.isError ? (

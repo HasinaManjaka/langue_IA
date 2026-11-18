@@ -818,11 +818,12 @@ d'un autre rôle), **422** langue inconnue ou liste vide.
 Pas de `DELETE` : un formateur est lié à ses ateliers (`Atelier.id_formateur`, `ON DELETE RESTRICT`), il est donc
 désactivé plutôt que supprimé. Un compte `INACTIF` est refusé à la connexion (**403**), comme pour tout utilisateur.
 
-## Parcours personnalisé (US41 à US44) — rôle `APPRENANT` — contrat frontend, routes à créer côté backend
+## Parcours personnalisé (US41 à US44, contenu de démo US156) — rôle `APPRENANT`
 
-Le frontend fonctionne aujourd'hui **sans backend** (`NEXT_PUBLIC_API_MOCK=true`, données de
-`frontend/src/mocks/parcours-personnalise.mock.ts`). Ce contrat décrit ce que le backend devra exposer pour le
-brancher ; aucune route n'existe encore. Conversion côté frontend : `frontend/src/services/parcours-personnalise.mapper.ts`.
+Les routes lecture et correction sont désormais exposées par le backend (contenu original anglais US156,
+leçons 12 A1 et 50 A2). Le frontend peut donc fonctionner en mode réel ; le mode mock reste disponible pour
+les formats non présents dans la démo (écoute, prononciation, conversation/chatbot). Conversion côté frontend :
+`frontend/src/services/parcours-personnalise.mapper.ts`.
 
 Écrans : « Mon parcours » (`/espace/apprenant/parcours`), un module (`/parcours/modules/{numero}`) et une leçon
 (`/parcours/lecons/{numero}`) ; la barre latérale liste les modules sous « Mon parcours ».
@@ -874,13 +875,14 @@ Une ligne par `parcours_exercice` jusqu'à la leçon atteinte (le backend ne cr�
 Mêmes lignes que ci-dessus pour une leçon, plus le `contenu` de chaque exercice (texte JSON de `exercice.contenu`) :
 
 ```json
-{ "numero_lecon": 23, "est_lecon_de_revision": false, "code_langue": "fr",
+{ "numero_lecon": 23, "titre": "At the Language Centre", "texte_original": "Mina works at a language centre.",
+  "est_lecon_de_revision": false, "code_langue": "en",
   "exercices": [{ "id_parcours_exercice": 233, "type": "ECOUTE", "…": "…",
                   "contenu": "{\"format\":\"ecoute\",\"consigne\":\"…\",\"question\":\"…\",\"choix\":[\"…\"],\"audio_url\":null,\"texte_audio\":\"…\"}" }] }
 ```
 
 Formats de `contenu` : `choix` (`enonce`, `choix`), `texte` (`enonce`, `___` marque un trou), `redaction` (`enonce`,
-`mots_minimum`, 30 par défaut ; réponse libre corrigée par l'IA), `ecoute` (`question`, `choix`, `audio_url` ou
+`mots_minimum`, 30 par défaut ; réponse libre corrigée par mots-clés en mode `AUTOMATIQUE`), `ecoute` (`question`, `choix`, `audio_url` ou
 `texte_audio` lu par le navigateur), `prononciation` (`phrase` à lire à voix haute, transcrite par la reconnaissance
 vocale du navigateur), `conversation` (`sujet`, `message_initial`, `echanges_minimum`).
 **403** leçon pas encore atteinte (le `detail` est affiché).

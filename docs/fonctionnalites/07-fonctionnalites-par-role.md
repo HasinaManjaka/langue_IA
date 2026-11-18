@@ -397,7 +397,7 @@ rien à afficher à un formateur, et le frontend ne peut rien lui montrer d'autr
 | Voir / animer ses séances | ⛔ | table `atelier` vide, aucune route |
 | Créer un atelier | ⛔ | aucune route, aucun écran |
 | Corriger des productions | ⛔ | les réponses `texte` ne sont jamais corrigées |
-| Suivre la progression | ⛔ | tables `parcours` / `exercice` inertes |
+| Suivre la progression | 🟡 | démo apprenant disponible via `/api/v1/parcours`, pas de vue formateur |
 | Consulter le diagnostic d'un apprenant | ⛔ | aucune route ne l'expose au formateur |
 
 ### 5.5 Les routes auxquelles le formateur a droit

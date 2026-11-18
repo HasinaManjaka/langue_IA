@@ -5,6 +5,7 @@
 - Comptes de démonstration (un par rôle, mot de passe Demo2026), seulement si SEED_DEMO=true :
   ce sont les comptes proposés sur la page de connexion. Jamais en production.
 - Banque de questions du diagnostic (anglais, français), seulement si SEED_DEMO=true (app/seed_diagnostic.py).
+- Leçons originales et exercices corrigés de démonstration (US156), seulement si SEED_DEMO=true (app/seed_us156.py).
 
 Relancer à la main (Docker) : `make seed`, ou `docker compose exec backend python -m app.seed`.
 """
@@ -36,6 +37,7 @@ from app.models import (
 from app.models.enums import CODES
 from app.models.roles import DROITS_PAR_ROLE, PERMISSIONS_INITIALES
 from app.seed_diagnostic import charger_questions_demo
+from app.seed_us156 import charger_contenu_demo_us156
 
 logger = logging.getLogger(__name__)
 
@@ -177,6 +179,8 @@ def main() -> None:
             logger.info("Comptes de démonstration chargés (mot de passe %s).", MOT_DE_PASSE_DEMO)
             creees = charger_questions_demo(db)
             logger.info("Questions de diagnostic de démonstration : %d ajoutée(s).", creees)
+            creees_us156 = charger_contenu_demo_us156(db)
+            logger.info("Contenu de démonstration US156 : %d ligne(s) ajoutée(s).", creees_us156)
 
 
 if __name__ == "__main__":

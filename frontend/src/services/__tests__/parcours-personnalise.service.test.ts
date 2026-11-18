@@ -1,9 +1,12 @@
 import { choisirScenarioParcoursMock, corrigerRedaction, scorePrononciation } from "@/mocks/parcours-personnalise.mock";
 import {
   toContenuExercice,
+  toCorrectionExercice,
   toExerciceParcours,
+  toLeconParcours,
   toParcoursPersonnalise,
   type ExerciceParcoursDto,
+  type LeconParcoursDto,
   type ParcoursPersonnaliseDto,
 } from "@/services/parcours-personnalise.mapper";
 import {
@@ -71,6 +74,24 @@ describe("conversion du contrat d'API", () => {
       type: "ORAL",
       statut: "A_REVOIR",
       intitule: null,
+    });
+  });
+
+  it("convertit le titre et le texte original d'une leçon", () => {
+    const dto: LeconParcoursDto = {
+      numero_lecon: 12,
+      titre: "At the Language Centre",
+      texte_original: "Mina works at a language centre.",
+      est_lecon_de_revision: false,
+      code_langue: "en",
+      exercices: [{ ...exerciceDto(), contenu: '{"format":"choix","consigne":"c","enonce":"Q ?","choix":["a"]}' }],
+    };
+
+    expect(toLeconParcours(dto)).toMatchObject({
+      numero: 12,
+      titre: "At the Language Centre",
+      texteOriginal: "Mina works at a language centre.",
+      langue: "en",
     });
   });
 
@@ -220,7 +241,7 @@ describe("service HTTP (prêt pour le backend)", () => {
     });
     expect(apiRequest).toHaveBeenCalledWith("/api/v1/parcours/7/exercices/231/reponse", {
       method: "POST",
-      body: { format: "prononciation", reponse: "bonjour" },
+      body: { format: "redaction", reponse: "bonjour" },
       timeoutMs: 45_000,
     });
   });
@@ -233,5 +254,65 @@ describe("service HTTP (prêt pour le backend)", () => {
     expect(route).toBe("/api/v1/chatbot/message");
     expect(options.body.historique).toHaveLength(HISTORIQUE_CHATBOT_MAX);
     expect(options.body.historique[0].contenu).toBe("m5");
+  });
+
+  it("récupère le titre et le texte original d'une leçon via la route HTTP", async () => {
+    apiRequest.mockResolvedValueOnce({
+      numero_lecon: 12,
+      titre: "At the Language Centre",
+      texte_original: "Mina works at a language centre.",
+      est_lecon_de_revision: false,
+      code_langue: "en",
+      exercices: [{ ...exerciceDto(), contenu: '{"format":"choix","consigne":"c","enonce":"Q ?","choix":["a"]}' }],
+    });
+
+    const lecon = await http.lecon(7, 12);
+
+    expect(apiRequest).toHaveBeenCalledWith("/api/v1/parcours/7/lecons/12");
+    expect(lecon).toMatchObject({ numero: 12, titre: "At the Language Centre", texteOriginal: "Mina works at a language centre." });
+  });
+
+  it("convertit les champs enrichis de la correction renvoyée par le backend", async () => {
+    const correction = toCorrectionExercice({
+      statut: "REUSSI",
+      score_obtenu: 80,
+      mode_correction: "automatique",
+      commentaire: "Bien",
+      explication: "Réponse attendue.",
+      reponse_attendue: "a",
+      points_forts: ["Mot-clé trouvé."],
+      erreurs: [{ extrait: "a", correction: "b", explication: "À revoir." }],
+      conseil: "Continuez.",
+    });
+
+    expect(correction).toMatchObject({
+      statut: "REUSSI",
+      scoreObtenu: 80,
+      mode: "AUTOMATIQUE",
+      pointsForts: ["Mot-clé trouvé."],
+      erreurs: [{ extrait: "a", correction: "b", explication: "À revoir." }],
+      conseil: "Continuez.",
+    });
+  });
+});
+
+describe("garde-fous du contrat d'exercice", () => {
+  it("rejette un contenu JSON invalide au lieu d'afficher un exercice vide", () => {
+    expect(() => toContenuExercice("null")).toThrow("objet attendu");
+    expect(() => toContenuExercice("[]")).toThrow("objet attendu");
+    expect(() => toContenuExercice("{'format':'choix'}")).toThrow("JSON mal formé");
+    expect(() => toContenuExercice('{"format":"choix","consigne":"c","enonce":"Q","choix":[]}')).toThrow("choix");
+    expect(() => toContenuExercice('{"format":"choix","consigne":"  ","enonce":"Q","choix":["a"]}')).toThrow("consigne");
+    expect(() => toContenuExercice('{"format":"redaction","consigne":"c","enonce":"Q","mots_minimum":0}')).toThrow("mots_minimum");
+  });
+
+  it("refuse un format de réponse qui ne correspond pas à l'exercice en mode mock", async () => {
+    const { exercices } = await mock.lecon(7, 23);
+    const conversation = exercices.find((exercice) => exercice.contenu.format === "conversation");
+    expect(conversation).toBeDefined();
+
+    await expect(
+      mock.corriger(7, conversation!.idParcoursExercice, { format: "choix", reponse: "a" }),
+    ).rejects.toMatchObject({ status: 422 });
   });
 });

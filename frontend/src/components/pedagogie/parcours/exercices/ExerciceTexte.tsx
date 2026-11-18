@@ -33,7 +33,13 @@ export default function ExerciceTexte({
       {apres === null ? (
         <label className="block">
           <span className="font-medium text-content">{avant}</span>
-          <textarea value={texte} onChange={(e) => setTexte(e.target.value)} rows={3} readOnly={verrouille} className="input mt-2" />
+          <textarea
+            value={texte}
+            onChange={(e) => setTexte(e.target.value)}
+            rows={3}
+            readOnly={verrouille || enCours}
+            className="input mt-2"
+          />
         </label>
       ) : (
         <p className="flex flex-wrap items-center gap-2 font-medium text-content">

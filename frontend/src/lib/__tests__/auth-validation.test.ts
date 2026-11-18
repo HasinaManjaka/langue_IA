@@ -81,6 +81,12 @@ describe("validateBirthDate", () => {
   it("accepte une date passée", () => {
     expect(validateBirthDate("2000-05-12", today)).toBeUndefined();
   });
+
+  it("refuse une date calendaire impossible au lieu de la normaliser", () => {
+    expect(validateBirthDate("2023-02-30", today)).toMatch(/Date invalide/);
+    expect(validateBirthDate("2023-13-01", today)).toMatch(/Date invalide/);
+    expect(validateBirthDate("2023-1-01", today)).toMatch(/Date invalide/);
+  });
 });
 
 describe("validateLogin", () => {

@@ -161,8 +161,8 @@ parfait et aucun écran reste 🔌.
    partiel ». C'est un choix d'architecture, pas un bug.
 4. **Trois fonctionnalités sont prêtes mais non branchées** : chatbot, RAG, administration des rôles. Le code
    existe, l'appelant manque.
-5. **Tout le reste est explicitement absent** : ateliers, réservations, formations, parcours, paiement,
-   sauvegardes, rétention.
+5. **Le parcours de démo US156 est branché** (leçons 12 et 50, correction locale) ; ateliers, réservations,
+   formations, paiement, sauvegardes et rétention restent explicitement absents.
 
 ---
 
@@ -277,7 +277,7 @@ Cocher chaque ligne ; si une ligne échoue, le diagnostic est dans le chapitre i
 | `formule.service.ts` hors `endpoints.ts` | contrat dispersé |
 | Vocabulaire `vocabulaire` non mappé côté IA | réponses ignorées dans l'analyse |
 | Pas de métriques | diagnostic de latence difficile |
-| Tables `parcours` / `atelier` inertes | schéma en avance sur le code |
+| Table `atelier` inerte | schéma en avance sur le code |
 
 ---
 
@@ -286,7 +286,7 @@ Cocher chaque ligne ; si une ligne échoue, le diagnostic est dans le chapitre i
 | Couche | Ce qu'elle prouve | Ce qu'elle ne prouve pas |
 | --- | --- | --- |
 | Docker | la stack démarre seule, migrations et seed compris | la charge, la haute disponibilité |
-| Base | 22 tables, contraintes, seed idempotent | la qualité pédagogique des questions |
+| Base | 24 tables, contraintes, seed idempotent, contenu parcours | la qualité pédagogique des questions |
 | Backend | règles métier, RBAC, scoring déterministe | la robustesse sous concurrence |
 | Frontend | parcours complets, gardes de rôle, mocks | la sécurité (le backend seul protège) |
 | IA | contrat d'enveloppe, validations, dégradation propre | la qualité des réponses d'un LLM réel |

@@ -100,21 +100,21 @@ Contraintes fortes :
 - unicité `(id_tentative, id_question)` : **une seule réponse par question et par tentative**, appliquée
   aussi par un `IntegrityError` géré dans `enregistrer_reponse`.
 
-### 2.5 Parcours (3 tables) et ateliers (1 table)
+### 2.5 Parcours (5 tables) et ateliers (1 table)
 
 | Table | Rôle | État réel |
 | --- | --- | --- |
-| `parcours` | parcours issu d'un diagnostic | **0 ligne**, aucune route |
-| `exercice` | exercice d'un parcours | **0 ligne**, aucune route |
-| `parcours_exercice` | progression par leçon | **0 ligne**, aucune route |
+| `parcours` | parcours issu d'un diagnostic | 1 ligne de démo (apprenant US156), routes `/parcours` |
+| `exercice` | exercice d'un parcours | 12 exercices de démo, `contenu` public sans correction |
+| `parcours_exercice` | progression par leçon | 12 lignes de démo, `score_obtenu` mis à jour à la correction |
+| `lecon` | leçon originale d'un parcours | 2 leçons de démo : 12 (A1) et 50 (A2) |
+| `corrige_exercice` | corrigé privé d'un exercice | 12 corrigés (mots-clés pour la rédaction) |
 | `atelier` | atelier animé par un formateur | **0 ligne**, aucune route ; seul le compteur admin la lit |
 
 `parcours.id_test` est **unique** : un diagnostic ne produit qu'un parcours. `parcours_exercice` porte
 `numero_lecon`, `score_obtenu` (0–100) et une contrainte d'unicité
-`(id_parcours, numero_lecon, id_exercice)`.
-
-> Les tables du parcours sont **prêtes mais inertes**. Les compter comme « fonctionnalité » serait une
-> erreur : sans route ni écran, elles ne servent à rien.
+`(id_parcours, numero_lecon, id_exercice)`. `lecon` est unique par `(id_parcours, numero_lecon)` et
+`corrige_exercice` est unique par `id_exercice` : aucun corrigé n'est sérialisé dans les réponses publiques.
 
 ---
 
@@ -156,9 +156,10 @@ données** : c'est la règle la plus importante de ce chapitre.
 | 5 | `20261027_diagnostic_scoring` | clé de correction et score final |
 | 6 | `20261110_us45_parcours` | `parcours`, `exercice`, `parcours_exercice` |
 | 7 | `20261110_diagnostic_analyse_ia` | `test_diagnostic.analyse_ia` (JSONB) |
+| 8 | `20261118_us156_contenu_demo` | `lecon`, `corrige_exercice`, `exercice.intitule` |
 
 La chaîne est **linéaire** (`down_revision` pointe sur la précédente). La migration 7 est volontairement
-placée après la 6 pour garder **une seule tête Alembic** sur `develop`.
+placée après la 6 pour garder **une seule tête Alembic** sur `develop` ; la migration 8 vient ensuite.
 
 ### 4.1 Appliquer
 
@@ -267,7 +268,8 @@ démonstration. À corriger si le sujet est montré à un jury.
 | `abonnement` | 1 (démo) + inscriptions | pas de route de résiliation |
 | `question` | 35 (démo) | test utilisable **en anglais et français seulement** |
 | `test_diagnostic`, `reponse` | 0 | créées à l'usage |
-| `parcours`, `exercice`, `parcours_exercice` | **0** | tables inertes |
+| `parcours`, `exercice`, `parcours_exercice` | 1 / 12 / 12 (démo) | routes `/parcours`, correction déterministe |
+| `lecon`, `corrige_exercice` | 2 / 12 (démo) | texte public, correction privée |
 | `atelier` | **0** | compteur admin à 0 |
 | `reponse.evaluation` | **jamais écrite** | colonne réservée |
 | `test_diagnostic.analyse_ia` | écrit **si** l'IA répond | sinon `NULL` → résultat partiel |
@@ -406,7 +408,7 @@ Get-Content sauvegarde.sql | docker compose exec -T db psql -U admin -d centre_l
 
 | Élément | Verdict | Preuve |
 | --- | --- | --- |
-| 22 tables créées par 7 migrations | ✅ | `alembic upgrade head` |
+| 24 tables créées par 8 migrations | ✅ | `alembic upgrade head` |
 | Référentiel (langues, niveaux, formules) | ✅ | `seed.py` |
 | RBAC persisté | ✅ | `roles`, `permissions` |
 | Comptes et questions de démo | ✅ | `SEED_DEMO=true` |
@@ -414,7 +416,7 @@ Get-Content sauvegarde.sql | docker compose exec -T db psql -U admin -d centre_l
 | Banque de questions EN/FR | 🟡 | 35 questions, 2 par niveau en A1 |
 | Questions `zh`, `it`, `de` | ⛔ | 0 ligne |
 | Questions `audio` / `texte` | 🔌 | type accepté, aucune donnée, audio refusé |
-| Tables de parcours | ⛔ | 0 ligne, aucune route |
+| Parcours de démo US156 | ✅ | 2 leçons, 12 exercices corrigés, routes `/parcours` |
 | Ateliers | ⛔ | 0 ligne, aucune route |
 | Sauvegardes | ⛔ | aucun code |
 | Rétention / anonymisation | ⛔ | aucun code |
@@ -432,5 +434,5 @@ Get-Content sauvegarde.sql | docker compose exec -T db psql -U admin -d centre_l
    code HTTP reçoit-il ?
 4. Le seed est idempotent. Sur quelles clés repose cette idempotence pour les langues, les comptes et les
    questions ? Que se passe-t-il si l'on modifie l'énoncé d'une question existante ?
-5. Pourquoi les tables `parcours` et `atelier` ne doivent-elles pas être présentées comme des
-   fonctionnalités livrées, même si elles existent en base ?
+5. Pourquoi la table `atelier` ne doit-elle toujours pas être présentée comme une fonctionnalité livrée,
+   alors que les tables du parcours ont désormais une démo branchée ?

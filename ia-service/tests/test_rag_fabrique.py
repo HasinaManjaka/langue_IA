@@ -89,3 +89,15 @@ def test_empreinte_desactivee_tolere_un_fichier_modifie(tmp_path: Path) -> None:
 
     assert isinstance(refuse, RecuperateurVide)
     assert isinstance(accepte, RecuperateurLocal)
+
+
+def test_configuration_invalide_retourne_le_recuperateur_vide(
+    monkeypatch: pytest.MonkeyPatch, caplog: pytest.LogCaptureFixture
+) -> None:
+    monkeypatch.setenv("RAG_CORPUS_ACTIF", "peut-etre")
+
+    with caplog.at_level(logging.ERROR, logger="app.rag.fabrique"):
+        recuperateur = construire_recuperateur()
+
+    assert isinstance(recuperateur, RecuperateurVide)
+    assert "Configuration RAG invalide" in caplog.text

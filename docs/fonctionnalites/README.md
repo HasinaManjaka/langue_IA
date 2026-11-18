@@ -32,7 +32,7 @@ Chaque fonctionnalité reçoit **un seul** verdict principal. Le verdict est vol
 | ✅ **Fonctionnel** | La chaîne complète marche avec le backend, la base et le frontend réels. | Connexion, inscription, profil, CRUD des langues |
 | 🟡 **Partiel** | La chaîne existe mais une partie est limitée, incomplète ou dégradée. | Diagnostic (2 questions, non adaptatif), analyse IA (dépend d'un vrai fournisseur) |
 | 🔌 **Non branché** | Le code existe mais aucun appelant ne l'utilise, ou l'appel échoue systématiquement. | Chatbot IA, reprise de test, `justification` du résultat |
-| ⛔ **Absent** | Aucun code, aucune route, aucune table utile. | Ateliers, réservations, paiements, parcours exposés |
+| ⛔ **Absent** | Aucun code, aucune route, aucune table utile. | Ateliers, réservations, paiements |
 | 🧪 **Simulé** | Fonctionne uniquement avec `NEXT_PUBLIC_API_MOCK=true`. | Tableau de bord apprenant/formateur, banque de 50 questions |
 
 > **Piège à connaître** : « présent dans l'interface » ≠ « fonctionnel ».
@@ -82,7 +82,7 @@ Frontend Next.js 14 ── HTTP :8000 ──► Backend FastAPI ── SQL ─�
 | Diagnostic | Justification détaillée du niveau | 🔌 | le backend ne renvoie jamais `justification` |
 | Chatbot IA | `POST /chatbot/message` | 🔌 | aucune route backend/frontend ne l'appelle |
 | Ateliers / réservations | Gestion | ⛔ | table `atelier` vide, aucune route |
-| Parcours | Tables `parcours`, `exercice` | ⛔ | aucune route, aucun écran |
+| Parcours | Démo US156 (leçons 12/50) | 🟡 | routes et correction réelles, écritures libres sans IA |
 | Abonnements | Souscription automatique à l'inscription | ✅ | `Abonnement` créé dans `register` |
 | Abonnements | Paiement / facturation | ⛔ | aucun code |
 | E-mails | Envoi réel | 🟡 | sans SMTP, le lien est écrit dans les logs |

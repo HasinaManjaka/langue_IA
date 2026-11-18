@@ -320,6 +320,8 @@ export const parcoursPersonnaliseMock = {
     }
     return {
       numero_lecon: numero,
+      titre: `Leçon ${numero}`,
+      texte_original: "Texte de démonstration : lisez les consignes puis répondez aux exercices.",
       est_lecon_de_revision: numero >= 50 && numero % 7 === 0,
       code_langue: "fr",
       exercices: RANGS.map((_, rang) => {
@@ -335,6 +337,8 @@ export const parcoursPersonnaliseMock = {
     const rang = (idParcoursExercice % 10) - 1;
     if (lecon > leconAtteinte || !RANGS[rang]) throw new ApiError(403, "Exercice indisponible");
     const exercice = exerciceMock(lecon, rang);
+    const formatAttendu = (exercice.contenu as { format: string }).format;
+    if (reponse.format !== formatAttendu) throw new ApiError(422, "Format de réponse inattendu.");
 
     let correction: Omit<CorrectionExerciceDto, "statut">;
     if (reponse.format === "conversation") {

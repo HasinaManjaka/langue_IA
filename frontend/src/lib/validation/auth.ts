@@ -33,10 +33,16 @@ export function validateNomPersonne(value: string, champ: "prénom" | "nom"): st
 /** Date de naissance obligatoire, au format AAAA-MM-JJ (valeur d'un <input type="date">). */
 export function validateBirthDate(value: string, today: Date = new Date()): string | undefined {
   if (!value) return "La date de naissance est requise.";
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return "Date invalide.";
-  if (date > today) return "La date de naissance ne peut pas être dans le futur.";
-  if (today.getFullYear() - date.getFullYear() > 120) return "Date de naissance invalide.";
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return "Date invalide.";
+  const [annee, mois, jour] = value.split("-").map(Number);
+  const date = new Date(Date.UTC(annee, mois - 1, jour));
+  if (date.getUTCFullYear() !== annee || date.getUTCMonth() !== mois - 1 || date.getUTCDate() !== jour) {
+    return "Date invalide.";
+  }
+  if (date.getTime() > Date.UTC(today.getFullYear(), today.getMonth(), today.getDate())) {
+    return "La date de naissance ne peut pas être dans le futur.";
+  }
+  if (today.getFullYear() - annee > 120) return "Date de naissance invalide.";
 }
 
 /**

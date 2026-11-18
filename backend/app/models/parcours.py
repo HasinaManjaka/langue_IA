@@ -5,6 +5,7 @@ from __future__ import annotations
 from datetime import datetime
 
 from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Integer, Text, UniqueConstraint, func, text
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.core.database import Base
@@ -45,6 +46,11 @@ class Parcours(Base):
         cascade="all, delete-orphan",
         passive_deletes=True,
     )
+    lecons: Mapped[list[Lecon]] = relationship(
+        back_populates="parcours",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+    )
 
     @property
     def phase(self) -> PhaseParcours:
@@ -55,6 +61,28 @@ class Parcours(Base):
         return est_lecon_de_revision(self.lecon_atteinte)
 
 
+class Lecon(Base):
+    """Contenu original d'une leçon ; la progression reste portée par Parcours.lecon_atteinte."""
+
+    __tablename__ = "lecon"
+    __table_args__ = (
+        CheckConstraint("numero_lecon >= 1", name="ck_lecon_numero_positive"),
+        UniqueConstraint("id_parcours", "numero_lecon", name="uq_lecon_parcours_numero"),
+    )
+
+    id_lecon: Mapped[int] = mapped_column(primary_key=True)
+    id_parcours: Mapped[int] = mapped_column(
+        ForeignKey("parcours.id_parcours", ondelete="CASCADE", name="fk_lecon_id_parcours"),
+    )
+    numero_lecon: Mapped[int] = mapped_column(Integer)
+    titre: Mapped[str] = mapped_column(Text)
+    texte_original: Mapped[str] = mapped_column(Text)
+    id_niveau: Mapped[int] = mapped_column(ForeignKey("niveau.id_niveau", name="fk_lecon_id_niveau"))
+
+    parcours: Mapped[Parcours] = relationship(back_populates="lecons")
+    niveau: Mapped[Niveau] = relationship()
+
+
 class Exercice(Base):
     __tablename__ = "exercice"
     __table_args__ = (CheckConstraint("difficulte BETWEEN 1 AND 5", name="ck_exercice_difficulte_1_5"),)
@@ -62,6 +90,7 @@ class Exercice(Base):
     id_exercice: Mapped[int] = mapped_column(primary_key=True)
     type: Mapped[TypeExercice] = mapped_column(EnumEntier(TypeExercice))
     contenu: Mapped[str] = mapped_column(Text)
+    intitule: Mapped[str | None] = mapped_column(Text, nullable=True)
     difficulte: Mapped[int] = mapped_column(Integer)
     id_langue: Mapped[int] = mapped_column(ForeignKey("langue.id_langue", name="fk_exercice_id_langue"))
     id_niveau: Mapped[int] = mapped_column(ForeignKey("niveau.id_niveau", name="fk_exercice_id_niveau"))
@@ -72,6 +101,31 @@ class Exercice(Base):
         back_populates="exercice",
         passive_deletes="all",
     )
+    corrige: Mapped[CorrigeExercice | None] = relationship(
+        back_populates="exercice",
+        cascade="all, delete-orphan",
+        passive_deletes=True,
+        uselist=False,
+    )
+
+
+class CorrigeExercice(Base):
+    """Corrigé privé d'un exercice : jamais exposé avant la soumission d'une réponse."""
+
+    __tablename__ = "corrige_exercice"
+    __table_args__ = (UniqueConstraint("id_exercice", name="uq_corrige_exercice_id_exercice"),)
+
+    id_corrige: Mapped[int] = mapped_column(primary_key=True)
+    id_exercice: Mapped[int] = mapped_column(
+        ForeignKey("exercice.id_exercice", ondelete="CASCADE", name="fk_corrige_exercice_id_exercice"),
+    )
+    reponse_attendue: Mapped[str] = mapped_column(Text)
+    explication: Mapped[str] = mapped_column(Text)
+    mots_cles: Mapped[list[str]] = mapped_column(JSONB, default=list, server_default=text("'[]'::jsonb"))
+    exemple_reponse: Mapped[str] = mapped_column(Text)
+    conseil: Mapped[str | None] = mapped_column(Text, nullable=True)
+
+    exercice: Mapped[Exercice] = relationship(back_populates="corrige")
 
 
 class ParcoursExercice(Base):
