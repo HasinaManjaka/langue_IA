@@ -1,12 +1,12 @@
 """Réponses de démonstration du fournisseur ``factice`` (tâche I-01).
 
-Sans clé LLM, ``LLM_FOURNISSEUR=factice`` échouait à chaque diagnostic (aucun scénario) : la démonstration
-retombait toujours en « résultat partiel ». Avec ``LLM_FACTICE_SCENARIO=demonstration``, le faux client répond au
-prompt d'évaluation diagnostic par un résultat **valide au sens du schéma**, **déterministe** (mêmes entrées, même
-sortie) et **sans appel réseau**, calculé à partir des données que le prompt transmet.
+Sans clé LLM, ``LLM_FOURNISSEUR=factice`` échouait à chaque appel (aucun scénario) : la démonstration
+retombait toujours en résultat partiel ou en erreur de configuration. Avec
+``LLM_FACTICE_SCENARIO=demonstration``, le faux client répond aux prompts d'évaluation diagnostic et de conversation
+par un résultat **valide au sens du schéma**, **déterministe** (mêmes entrées, même sortie) et **sans appel réseau**.
 
-Le résultat ne prétend pas être une analyse : chaque point faible annonce qu'il vient d'une démonstration, à
-confirmer avec un vrai fournisseur. Le factice reste interdit en production (``ConfigLLM``).
+Le résultat ne prétend pas être une analyse ni une réponse de modèle : il annonce la démonstration, à confirmer avec
+un vrai fournisseur. Le factice reste interdit en production (``ConfigLLM``).
 """
 
 import json
@@ -15,6 +15,7 @@ from collections.abc import Sequence
 from pydantic import BaseModel
 
 from app.llm.base import MessageLLM
+from app.schemas.chatbot import ResultatChatbot
 from app.schemas.diagnostic import (
     PhaseAssimil,
     PointFaible,
@@ -27,6 +28,19 @@ from app.schemas.regles import niveaux_du_referentiel
 
 BALISE_OUVRANTE = "<donnees_diagnostic_non_fiables>"
 BALISE_FERMANTE = "</donnees_diagnostic_non_fiables>"
+BALISE_CONVERSATION_OUVRANTE = "<donnees_conversation_non_fiables>"
+BALISE_CONVERSATION_FERMANTE = "</donnees_conversation_non_fiables>"
+
+REPONSES_CHATBOT_DEMONSTRATION = {
+    "en": "Demo answer: I can help you practise English. Ask me a short question.",
+    "fr": "Réponse de démonstration : je peux vous aider à pratiquer le français. Posez une courte question.",
+    "it": "Risposta di dimostrazione: posso aiutarti a praticare l'italiano. Fai una breve domanda.",
+    "de": "Demonstrationsantwort: Ich kann dir beim Deutschüben helfen. Stelle eine kurze Frage.",
+    "zh": "演示回答：我可以帮助你练习中文。请问一个简短问题。",
+}
+REPONSE_CHATBOT_DEMONSTRATION = (
+    "Réponse de démonstration : je peux vous aider à pratiquer une langue. Posez-moi une courte question."
+)
 
 SCORE_NIVEAU_SUPERIEUR = 85.0
 SCORE_NIVEAU_INFERIEUR = 30.0
@@ -50,21 +64,25 @@ JUSTIFICATION = (
 )
 
 
-def _donnees_diagnostic(messages: Sequence[MessageLLM]) -> dict | None:
-    """Relire le bloc JSON des données du diagnostic dans le message utilisateur, ou ``None`` s'il est absent."""
+def _donnees_balisees(messages: Sequence[MessageLLM], balise_ouvrante: str, balise_fermante: str) -> dict | None:
+    """Relire un bloc JSON balisé dans le message utilisateur, ou ``None`` s'il est absent ou invalide."""
     for message in messages:
         if message.role != "user":
             continue
-        debut = message.contenu.find(BALISE_OUVRANTE)
-        fin = message.contenu.find(BALISE_FERMANTE)
+        debut = message.contenu.find(balise_ouvrante)
+        fin = message.contenu.find(balise_fermante)
         if debut == -1 or fin == -1:
             continue
         try:
-            donnees = json.loads(message.contenu[debut + len(BALISE_OUVRANTE) : fin])
+            donnees = json.loads(message.contenu[debut + len(balise_ouvrante) : fin])
         except ValueError:
             return None
         return donnees if isinstance(donnees, dict) else None
     return None
+
+
+def _donnees_diagnostic(messages: Sequence[MessageLLM]) -> dict | None:
+    return _donnees_balisees(messages, BALISE_OUVRANTE, BALISE_FERMANTE)
 
 
 def _niveau_estime(referentiel: str, niveau_preliminaire: str, score: float) -> str:
@@ -128,8 +146,21 @@ def resultat_diagnostic_demonstration(messages: Sequence[MessageLLM]) -> Resulta
     )
 
 
-def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:
-    """Répondeur du faux client : seul le schéma ``ResultatDiagnostic`` a une réponse de démonstration."""
-    if schema is not ResultatDiagnostic:
+def resultat_chatbot_demonstration(messages: Sequence[MessageLLM]) -> ResultatChatbot | None:
+    """Construire une réponse de démonstration à partir du bloc JSON du prompt de conversation."""
+    donnees = _donnees_balisees(messages, BALISE_CONVERSATION_OUVRANTE, BALISE_CONVERSATION_FERMANTE)
+    if donnees is None or not isinstance(donnees.get("message"), str) or not donnees["message"].strip():
         return None
-    return resultat_diagnostic_demonstration(messages)
+    contexte = donnees.get("contexte_apprenant")
+    code_langue = contexte.get("code_langue") if isinstance(contexte, dict) else None
+    reponse = REPONSES_CHATBOT_DEMONSTRATION.get(code_langue, REPONSE_CHATBOT_DEMONSTRATION)
+    return ResultatChatbot(reponse=reponse)
+
+
+def repondre_demonstration(messages: Sequence[MessageLLM], schema: type[BaseModel]) -> BaseModel | None:
+    """Répondeur du faux client : les schémas diagnostic et chatbot ont une réponse de démonstration."""
+    if schema is ResultatDiagnostic:
+        return resultat_diagnostic_demonstration(messages)
+    if schema is ResultatChatbot:
+        return resultat_chatbot_demonstration(messages)
+    return None

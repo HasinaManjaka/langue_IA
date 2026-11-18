@@ -312,7 +312,7 @@ scénario** : l'appel échoue en `LLM_CONFIGURATION` (500), le backend dégrade 
 | Justification du niveau | 🔌 | le backend n'envoie jamais `justification` |
 | Historique des tentatives | ⛔ | les données existent en base, aucune route de liste |
 | Mes cours / ateliers / inscriptions / paramètres | ⛔ | entrées « Bientôt » |
-| Chatbot | ⛔ | aucune route backend, aucun écran |
+| Chatbot | 🔌 | relais backend `POST /api/v1/chatbot/message` prêt, aucun écran frontend |
 | Paiement / facture | ⛔ | aucun code |
 
 > **Conséquence pratique** : un apprenant qui ferme l'onglet pendant le test ne peut pas reprendre. L'écran

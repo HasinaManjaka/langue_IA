@@ -12,9 +12,15 @@ from app.core.erreurs import ErreurConfiguration
 from app.llm import fabrique
 from app.llm.adaptateurs.factice import FakeLLMClient, ScenarioLLM
 from app.llm.base import MessageLLM
-from app.llm.demonstration import JUSTIFICATION, repondre_demonstration, resultat_diagnostic_demonstration
+from app.llm.demonstration import (
+    JUSTIFICATION,
+    repondre_demonstration,
+    resultat_chatbot_demonstration,
+    resultat_diagnostic_demonstration,
+)
 from app.main import app
 from app.schemas.base import ModeleStrict
+from app.schemas.chatbot import ResultatChatbot
 from app.schemas.contexte import ContexteApprenant
 from app.schemas.diagnostic import PhaseAssimil, PreuveReponse, ResultatDiagnostic
 from tests.donnees import REQUEST_ID, RESULTAT_VALIDE
@@ -40,6 +46,19 @@ def messages(niveau: str = "B1", score: float = 64, reponses: list[dict] | None 
         "exemples_few_shot": [],
     }
     contenu = f"Évalue.\n<donnees_diagnostic_non_fiables>\n{json.dumps(donnees)}\n</donnees_diagnostic_non_fiables>"
+    return [MessageLLM(role="system", contenu="Système"), MessageLLM(role="user", contenu=contenu)]
+
+
+def messages_chatbot(langue: str = "en", message: str = "Bonjour") -> list:
+    referentiel = "HSK" if langue == "zh" else "CECRL"
+    donnees = {
+        "contexte_apprenant": {"code_langue": langue, "referentiel": referentiel, "niveau_preliminaire": "A2"},
+        "historique": [],
+        "message": message,
+    }
+    contenu = (
+        "Réponds.\n<donnees_conversation_non_fiables>\n" f"{json.dumps(donnees)}\n</donnees_conversation_non_fiables>"
+    )
     return [MessageLLM(role="system", contenu="Système"), MessageLLM(role="user", contenu=contenu)]
 
 
@@ -107,6 +126,16 @@ def test_aucune_reponse_hors_diagnostic() -> None:
     assert repondre_demonstration([MessageLLM(role="user", contenu="Bonjour")], ResultatDiagnostic) is None
 
 
+def test_chatbot_demonstration_valide_et_deterministe() -> None:
+    resultat = resultat_chatbot_demonstration(messages_chatbot())
+
+    assert resultat is not None
+    assert "Demo answer" in resultat.reponse
+    assert resultat == resultat_chatbot_demonstration(messages_chatbot())
+    assert repondre_demonstration(messages_chatbot(), ResultatChatbot) == resultat
+    assert resultat_chatbot_demonstration(messages_chatbot(message="   ")) is None
+
+
 def test_client_factice_scenarios_prioritaires_puis_repondeur() -> None:
     client = FakeLLMClient([ScenarioLLM(reponse=RESULTAT_VALIDE)], repondeur=repondre_demonstration)
 
@@ -164,3 +193,19 @@ def test_post_evaluer_repond_200_sans_cle_ni_reseau(client_demonstration: TestCl
     resultat = ResultatDiagnostic.model_validate(enveloppe["resultat"])
     assert resultat.phase_assimil is PhaseAssimil.ACTIVATION
     assert [p.domaine for p in resultat.points_faibles] == ["expression_ecrite", "expression_orale"]
+
+
+def test_post_chatbot_repond_200_sans_cle_ni_reseau(client_demonstration: TestClient) -> None:
+    corps = {
+        "request_id": REQUEST_ID,
+        "contexte": {"code_langue": "en", "referentiel": "CECRL", "niveau_preliminaire": "A2"},
+        "entree": {"message": "Bonjour, comment vas-tu ?", "historique": []},
+    }
+
+    reponse = client_demonstration.post("/chatbot/message", json=corps)
+
+    assert reponse.status_code == 200
+    enveloppe = reponse.json()
+    assert enveloppe["statut"] == "succes"
+    assert enveloppe["meta"]["fournisseur"] == "factice"
+    assert enveloppe["resultat"]["reponse"]

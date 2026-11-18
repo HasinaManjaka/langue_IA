@@ -156,9 +156,8 @@ règle : le service IA doit rester une proposition, jamais un verdict.
 | `I-03` | Évaluer les réponses libres | Service IA | P1 | M | — |
 | `I-04` | Activer le RAG CECRL | Service IA | P2 | M | — |
 
-> `B-10` est listée uniquement pour que la dépendance de `F-08` soit résolvable : c'est une fonctionnalité
-> **absente du produit**, pas une tâche IA inachevée, et elle n'est donc pas détaillée ici. Voir
-> [`06-matrice-fonctionnalites.md`](06-matrice-fonctionnalites.md).
+> `B-10` est désormais livrée : le backend expose `POST /api/v1/chatbot/message` et relaie vers le service IA.
+> `F-08` reste à faire côté frontend. Voir [`06-matrice-fonctionnalites.md`](06-matrice-fonctionnalites.md).
 
 **Lecture immédiate** : deux tâches sont **P0** et coûtent peu (`B-03`, `I-01` → `D-01`). Ce sont elles qui
 transforment une démonstration « partielle » en démonstration maîtrisée.
@@ -168,8 +167,8 @@ transforment une démonstration « partielle » en démonstration maîtrisée.
 ## 3. Tâches backend
 
 Le backend est la couche la plus avancée de la chaîne. Les tâches restantes ne concernent pas le calcul, mais
-**le contrat**, **le coût** et **l'observabilité**. La seule exception est `B-10` (route backend du chatbot), qui
-crée une fonctionnalité absente et n'est donc pas détaillée ici (voir la note du §2).
+**le contrat**, **le coût** et **l'observabilité**. `B-10` (route backend du chatbot) est livrée et n'est donc pas
+détaillée ici (voir la note du §2).
 
 ### B-01 — Reprise et abandon d'une tentative
 
@@ -702,22 +701,23 @@ régression.
 
 ### F-08 — Écran de chatbot
 
-**Priorité** P2 · **État** ⛔ (bloqué par l'absence de route backend) · **Effort** L · **Dépend de** `B-10` —
+**Priorité** P2 · **État** ⛔ (écran absent ; backend prêt) · **Effort** L · **Dépend de** `B-10` ✅ —
 
-**Objectif.** Un jour, un vrai assistant. Aujourd'hui, rien.
+**Objectif.** Un jour, un vrai assistant. Aujourd'hui, le relais backend existe mais aucun écran ne l'utilise.
 
-**État actuel.** `POST /chatbot/message` existe **uniquement** dans `ia-service`, avec son agent, son prompt
-`chatbot/conversation@1.0.0` et un budget de 30 s. Aucun code backend ne l'appelle, aucun écran ne l'affiche. Le
-service IA n'est pas authentifié : l'exposer au navigateur serait une faute (voir `F-06`).
+**État actuel.** `POST /chatbot/message` existe dans `ia-service`, avec son agent, son prompt
+`chatbot/conversation@1.0.0` et un budget de 30 s. Le backend expose désormais `POST /api/v1/chatbot/message` :
+route authentifiée, réservée aux apprenants, qui construit le contexte depuis le parcours en cours et relaie vers le
+service IA. Le service IA n'est pas authentifié : l'exposer directement au navigateur resterait une faute (voir `F-06`).
 
-**À faire.** D'abord `B-10` : une route backend authentifiée qui relaie vers le service IA, avec un quota (même
-problème de coût que `B-03`). Ensuite seulement, un panneau de discussion.
+**À faire.** Ajouter un panneau de discussion côté frontend, puis un quota côté backend (même problème de coût que
+`B-03`).
 
 **Critères d'acceptation.**
 
-- [ ] l'écran n'existe que si la route backend existe ;
+- [x] l'écran n'existe que si la route backend existe ;
 - [ ] le quota est appliqué côté backend, pas côté navigateur ;
-- [ ] aucun historique n'est persisté sans décision de rétention explicite.
+- [x] aucun historique n'est persisté sans décision de rétention explicite.
 
 ---
 

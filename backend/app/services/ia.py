@@ -11,11 +11,13 @@ import httpx
 from pydantic import ValidationError
 
 from app.core.config import get_settings
+from app.schemas.chatbot import ReponseChatbotIA, RequeteChatbotIA
 from app.schemas.ia import ReponseDiagnosticIA, RequeteDiagnosticIA
 
 logger = logging.getLogger(__name__)
 
 CHEMIN_EVALUATION = "/diagnostic/evaluer"
+CHEMIN_CHATBOT = "/chatbot/message"
 
 
 class ErreurServiceIA(Exception):
@@ -60,5 +62,36 @@ def evaluer_diagnostic(
 
     try:
         return ReponseDiagnosticIA.model_validate(reponse.json())
+    except (ValueError, ValidationError):
+        raise ErreurServiceIA("reponse_invalide") from None
+
+
+def envoyer_message_chatbot(
+    requete: RequeteChatbotIA,
+    *,
+    transport: httpx.BaseTransport | None = None,
+) -> ReponseChatbotIA:
+    """Appeler l'agent Chatbot et retourner son enveloppe validée."""
+    settings = get_settings()
+    base = settings.ia_service_url.strip()
+    if not base:
+        raise ErreurServiceIA("non_configure")
+
+    try:
+        with httpx.Client(timeout=settings.ia_service_timeout_s, transport=transport) as client:
+            reponse = client.post(
+                f"{base.rstrip('/')}{CHEMIN_CHATBOT}",
+                json=requete.model_dump(mode="json", exclude_none=True),
+            )
+    except httpx.TimeoutException:
+        raise ErreurServiceIA("timeout") from None
+    except httpx.HTTPError:
+        raise ErreurServiceIA("indisponible") from None
+
+    if reponse.status_code != 200:
+        raise ErreurServiceIA(f"http_{reponse.status_code}")
+
+    try:
+        return ReponseChatbotIA.model_validate(reponse.json())
     except (ValueError, ValidationError):
         raise ErreurServiceIA("reponse_invalide") from None

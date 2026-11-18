@@ -31,7 +31,7 @@ Chaque fonctionnalité reçoit **un seul** verdict principal. Le verdict est vol
 | --- | --- | --- |
 | ✅ **Fonctionnel** | La chaîne complète marche avec le backend, la base et le frontend réels. | Connexion, inscription, profil, CRUD des langues |
 | 🟡 **Partiel** | La chaîne existe mais une partie est limitée, incomplète ou dégradée. | Diagnostic (2 questions, non adaptatif), analyse IA (dépend d'un vrai fournisseur) |
-| 🔌 **Non branché** | Le code existe mais aucun appelant ne l'utilise, ou l'appel échoue systématiquement. | Chatbot IA, reprise de test, `justification` du résultat |
+| 🔌 **Non branché** | Le code existe mais aucun appelant ne l'utilise, ou l'appel échoue systématiquement. | Reprise de test, `justification` du résultat, RAG CECRL |
 | ⛔ **Absent** | Aucun code, aucune route, aucune table utile. | Ateliers, réservations, paiements |
 | 🧪 **Simulé** | Fonctionne uniquement avec `NEXT_PUBLIC_API_MOCK=true`. | Tableau de bord apprenant/formateur, banque de 50 questions |
 
@@ -80,7 +80,7 @@ Frontend Next.js 14 ── HTTP :8000 ──► Backend FastAPI ── SQL ─�
 | Diagnostic | Analyse IA (points faibles, phase, compétences) | 🟡 | dépend de `LLM_FOURNISSEUR` ; partiel par défaut |
 | Diagnostic | Reprise / abandon d'un test interrompu | 🔌 | routes absentes côté backend |
 | Diagnostic | Justification détaillée du niveau | 🔌 | le backend ne renvoie jamais `justification` |
-| Chatbot IA | `POST /chatbot/message` | 🔌 | aucune route backend/frontend ne l'appelle |
+| Chatbot IA | `POST /api/v1/chatbot/message` | ✅ | relais backend authentifié vers `ia-service`, contexte construit côté backend |
 | Ateliers / réservations | Gestion | ⛔ | table `atelier` vide, aucune route |
 | Parcours | Démo US156 (leçons 12/50) | 🟡 | routes et correction réelles, écritures libres sans IA |
 | Abonnements | Souscription automatique à l'inscription | ✅ | `Abonnement` créé dans `register` |

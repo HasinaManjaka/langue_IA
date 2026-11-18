@@ -7,13 +7,14 @@ import httpx
 import pytest
 
 from app.core.config import get_settings
+from app.schemas.chatbot import ContexteChatbotIA, EntreeChatbotIA, RequeteChatbotIA
 from app.schemas.ia import (
     ContexteApprenantIA,
     EntreeDiagnosticIA,
     PreuveDiagnosticIA,
     RequeteDiagnosticIA,
 )
-from app.services.ia import ErreurServiceIA, evaluer_diagnostic
+from app.services.ia import ErreurServiceIA, envoyer_message_chatbot, evaluer_diagnostic
 
 REQUEST_ID = UUID("3f1c9b7e-6a2d-4f0e-9c1a-2b7d5e8f4a10")
 
@@ -46,6 +47,23 @@ ENVELOPPE = {
         "modele": "modele-test",
         "version_corpus": None,
         "empreinte_prompt": "sha256:" + "a" * 64,
+    },
+}
+
+
+ENVELOPPE_CHATBOT = {
+    "request_id": str(REQUEST_ID),
+    "agent": "chatbot",
+    "version_agent": "1.0.0",
+    "version_prompt": "chatbot/conversation@1.0.0",
+    "statut": "succes",
+    "resultat": {"reponse": "Bonjour !"},
+    "meta": {
+        "duree_ms": 230,
+        "fournisseur": "factice",
+        "modele": "modele-test",
+        "version_corpus": None,
+        "empreinte_prompt": "sha256:" + "b" * 64,
     },
 }
 
@@ -161,3 +179,52 @@ def test_url_absente_desactive_l_analyse(monkeypatch: pytest.MonkeyPatch) -> Non
         assert erreur.value.code == "non_configure"
     finally:
         get_settings.cache_clear()
+
+
+def requete_chatbot() -> RequeteChatbotIA:
+    return RequeteChatbotIA(
+        request_id=REQUEST_ID,
+        contexte=ContexteChatbotIA(code_langue="en", referentiel="CECRL", niveau_preliminaire="A2"),
+        entree=EntreeChatbotIA(
+            message="Bonjour",
+            historique=[{"role": "assistant", "contenu": "Hello!"}],
+        ),
+    )
+
+
+def test_chatbot_appelle_l_agent_et_valide_l_enveloppe(service_ia) -> None:
+    appels: list[httpx.Request] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        appels.append(request)
+        return httpx.Response(200, json=ENVELOPPE_CHATBOT)
+
+    reponse = envoyer_message_chatbot(requete_chatbot(), transport=_transport(handler))
+
+    assert reponse.resultat.reponse == "Bonjour !"
+    assert len(appels) == 1
+    assert appels[0].url == "http://ia.test/chatbot/message"
+    corps = appels[0].read().decode()
+    assert "niveau_preliminaire" in corps
+    assert "historique" in corps
+    assert "email" not in corps
+
+
+@pytest.mark.parametrize(
+    "corps",
+    [
+        {"statut": "succes"},
+        {**ENVELOPPE_CHATBOT, "resultat": {"reponse": ""}},
+        {**ENVELOPPE_CHATBOT, "agent": "diagnostic"},
+        "pas un objet",
+    ],
+    ids=["incomplet", "reponse-vide", "mauvais-agent", "pas-un-objet"],
+)
+def test_chatbot_reponse_hors_contrat_refusee(service_ia, corps) -> None:
+    def handler(_: httpx.Request) -> httpx.Response:
+        return httpx.Response(200, json=corps)
+
+    with pytest.raises(ErreurServiceIA) as erreur:
+        envoyer_message_chatbot(requete_chatbot(), transport=_transport(handler))
+
+    assert erreur.value.code == "reponse_invalide"

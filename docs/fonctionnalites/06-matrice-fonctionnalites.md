@@ -110,7 +110,7 @@ parfait et aucun écran reste 🔌.
 | Fournisseur `compatible-openai` | — | — | — | ✅ | ✅ | adaptateur testé |
 | Fournisseur `gemini` | — | — | — | ✅ | ✅ | adaptateur testé |
 | Fournisseur `factice` en démonstration | — | — | — | 🟡 | 🟡 | aucun scénario par défaut → `LLM_CONFIGURATION` (500) |
-| Chatbot `POST /chatbot/message` | ⛔ | ⛔ | — | ✅ | 🔌 | route IA + prompt + tests, **aucun appelant** |
+| Chatbot `POST /chatbot/message` | ⛔ | ✅ | — | ✅ | 🔌 | relais backend authentifié livré, **aucun écran frontend** |
 | Mémoire de conversation | ⛔ | ⛔ | — | ⛔ | ⛔ | service sans état ; historique renvoyé à chaque appel |
 | RAG CECRL | — | — | — | 🔌 | 🔌 | `RAG_CORPUS_ACTIF=false`, corpus absent |
 | Modèles entraînés locaux | — | — | — | ⛔ | ⛔ | `ia-service/models/` vide |
@@ -159,8 +159,8 @@ parfait et aucun écran reste 🔌.
    démonstration de chaîne complète.
 3. **L'IA est branchée mais facultative** : sans fournisseur configuré, tout continue, avec un « Résultat
    partiel ». C'est un choix d'architecture, pas un bug.
-4. **Trois fonctionnalités sont prêtes mais non branchées** : chatbot, RAG, administration des rôles. Le code
-   existe, l'appelant manque.
+4. **Deux fonctionnalités sont prêtes mais non branchées** : RAG et administration des rôles. Le chatbot a désormais
+   son relais backend, mais aucun écran frontend ne l'appelle.
 5. **Le parcours de démo US156 est branché** (leçons 12 et 50, correction locale) ; ateliers, réservations,
    formations, paiement, sauvegardes et rétention restent explicitement absents.
 
@@ -214,7 +214,7 @@ Invoke-RestMethod http://localhost:8001/health   # {"status":"ok","service":"ia-
 - « le test dure 15 minutes » → faux en réel ;
 - « l'IA analyse toujours les réponses » → faux par défaut ;
 - « on peut reprendre un test interrompu » → non branché ;
-- « le chatbot est disponible » → non branché ;
+- « le panneau de chatbot est disponible » → aucun écran frontend (le relais backend existe) ;
 - « les ateliers sont gérés » → table vide, aucune route.
 
 ---
@@ -319,8 +319,8 @@ Dans l'ordre de coût croissant :
    pourquoi ? Cite un exemple de la matrice.
 2. Pourquoi le tableau de bord administrateur est-il classé 🟡 alors que la courbe des inscriptions et la
    répartition par langue fonctionnent réellement ?
-3. Le chatbot a une route IA ✅, un prompt ✅ et des tests ✅, mais le verdict est 🔌. Qu'est-ce qui manque
-   exactement pour le passer en ✅, et dans quelles couches ?
+3. Le chatbot a une route IA ✅, un prompt ✅, un relais backend ✅ et des tests ✅, mais le verdict est 🔌.
+   Qu'est-ce qui manque exactement pour le passer en ✅, et dans quelles couches ?
 4. Un jury demande « le test de positionnement dure-t-il 15 minutes ? ». Quelle réponse donnes-tu, en
    distinguant le mode simulé du mode réel ?
 5. Classe ces trois risques du plus grave au moins grave, en justifiant : `SEED_DEMO=true` en production,

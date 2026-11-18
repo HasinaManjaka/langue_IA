@@ -486,8 +486,8 @@ L'enveloppe d'entrée est **commune** à tous les agents :
 L'enveloppe de succès contient `request_id`, `agent`, `version_agent`, `version_prompt`,
 `resultat`, `meta` (durée, fournisseur, modèle, version du corpus, empreinte du prompt).
 
-**Important** : cette route chatbot n'est appelée par **personne**. Ni le frontend ni le backend
-ne l'utilisent. En local, le fournisseur par défaut est `factice`.
+**Important** : cette route chatbot est appelée par le backend via `POST /api/v1/chatbot/message` (relais
+authentifié), mais aucun écran frontend ne l'utilise encore. En local, le fournisseur par défaut est `factice`.
 
 La seconde route, `api/diagnostic.py`, suit exactement le même gabarit :
 

@@ -103,7 +103,7 @@ le parcours est incomplet ; **Prévu** = modèles, contrats ou UI sans implémen
 | Diagnostic — création / réponses / score | Implémenté | tentative, questions, réponses, score déterministe | — |
 | Diagnostic — reprise / abandon | Prévu | le frontend appelle `en-cours` et `abandonner` | routes absentes côté backend → 404 |
 | Diagnostic — analyse IA détaillée | Partiel | agent `diagnostic@1.0.0`, route `POST /diagnostic/evaluer`, appel backend best-effort, `analyse_ia` persistée | aucun appelant frontend direct ; dégradation silencieuse en « Résultat partiel » si le service est absent |
-| Chatbot | Partiel | `POST /chatbot/message` dans `ia-service` | aucun appelant (ni frontend ni backend), fournisseur `factice` par défaut |
+| Chatbot | Implémenté | `POST /api/v1/chatbot/message` côté backend, agent `chatbot@1.0.0` dans `ia-service`, frontend branché | fournisseur `factice` par défaut, aucun historique persisté |
 | Questions audio | Partiel | modèle, UI d'enregistrement, contrat | le backend refuse les réponses audio ; le frontend les masque |
 | Parcours / ateliers | Partiel | tables `Parcours`, `Exercice`, `Atelier`, migration `us45_parcours` ; `Atelier` est compté dans le tableau de bord admin | aucune route de gestion, aucune UI de parcours |
 | Abonnements | Partiel | `Abonnement` créé automatiquement à l'inscription, visible dans les statistiques admin | aucune route de souscription ni de gestion |

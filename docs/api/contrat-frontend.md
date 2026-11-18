@@ -932,8 +932,11 @@ Le backend enregistre la réponse et `score_obtenu` (`parcours_exercice`), puis 
 exercices de la leçon atteinte ont une réponse. L'apprenant peut refaire un exercice : la dernière correction remplace
 la précédente. **502/503/504** (IA indisponible ou trop lente) : le frontend garde la réponse et propose de la renvoyer.
 
-### `POST /chatbot/message` — relais du service IA (tâche B-10)
+### `POST /api/v1/chatbot/message` — relais authentifié du service IA (tâche B-10)
 
 Mêmes champs que `ia-service` (`app/schemas/chatbot.py`) : `{ "message": "…", "historique": [{ "role": "assistant",
-"contenu": "…" }] }` (20 derniers tours au plus) → `{ "reponse": "…" }`. Le frontend ne garde la conversation que
-dans l'écran (aucun historique conservé, voir F-08) ; sans backend, le professeur IA est simulé et l'écran l'indique.
+"contenu": "…" }] }` (20 derniers tours au plus) → `{ "reponse": "…" }`. La route exige un JWT d'apprenant et
+construit le contexte langue/niveau côté backend à partir du parcours en cours. Aucun historique n'est persisté.
+Erreurs publiques : `401` session invalide, `403` rôle non apprenant, `422` corps hors contrat ou langue non prise en
+charge, `429` trop de requêtes, `502/503/504` service IA indisponible ou trop lent. Le mock frontend reste disponible
+en mode mock ; en mode HTTP, le professeur IA passe par cette route.

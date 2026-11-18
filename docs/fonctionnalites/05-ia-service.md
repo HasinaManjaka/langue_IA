@@ -385,14 +385,14 @@ ResultatChatbot { reponse (1–4 000) }
 - l'historique est **borné** à 20 tours pour garder un prompt de taille prévisible ;
 - un message fait uniquement d'espaces devient vide et est refusé.
 
-**Mais personne ne l'appelle.** Il n'existe :
+**Le backend l'appelle, mais aucun écran ne l'utilise.** Il existe :
 
-- aucune route backend `/chatbot` ;
+- une route backend authentifiée `POST /api/v1/chatbot/message` qui relaie vers le service IA ;
 - aucun écran frontend ;
 - aucune entrée de menu.
 
-La route `POST /chatbot/message` est donc **livrée mais non branchée**. C'est la fonctionnalité la plus
-« prête à brancher » du dépôt : le contrat existe, le prompt existe, les tests existent.
+La route `POST /chatbot/message` est donc **branchée côté backend**. Le contrat, le prompt et les tests existent ;
+il reste à ajouter le panneau frontend et un quota backend.
 
 ---
 
@@ -655,7 +655,7 @@ docker compose logs ia-service | Select-String "Corpus|LLM|démarrage"
 | Fournisseur `compatible-openai` | ✅ | adaptateur testé |
 | Fournisseur `gemini` | ✅ | adaptateur testé |
 | Fournisseur `factice` utilisable en démo | 🟡 | aucun scénario → 500 |
-| Agent chatbot | 🔌 | route livrée, **aucun appelant** |
+| Agent chatbot | 🔌 | relais backend livré, **aucun écran frontend** |
 | RAG CECRL | 🔌 | désactivé, corpus absent |
 | Modèles entraînés (`models/`) | ⛔ | dossier vide |
 | Persistance / historique | ⛔ | service sans état, par choix |
